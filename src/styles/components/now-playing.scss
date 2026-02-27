@@ -4,15 +4,13 @@
  * Styles for the 'Now Playing' screen.
  *
  */
-.now-playing {
-  background:
-    radial-gradient(circle at 15% 10%, rgba(255, 255, 255, 0.16), transparent 45%),
-    linear-gradient(
-      160deg,
-      var(--colour-now-playing-gradient-start) 0%,
-      var(--colour-now-playing-gradient-end) 100%
-    );
-  color: var(--colour-now-playing-text);
+.htdj-player {
+  background: linear-gradient(
+    145deg,
+    var(--colour-background-now-playing),
+    rgba(0, 0, 0, 0.45)
+  );
+  color: var(--color-text-primary);
   display: flex;
   flex-flow: column nowrap;
   height: 100%;
@@ -61,14 +59,13 @@
     will-change: transform;
   }
 
-  &__content {
+  &__cover-stage {
     align-items: center;
     display: flex;
     flex-flow: column nowrap;
     gap: clamp(var(--spacing-l), 3vw, 2.5rem);
     justify-content: center;
-    margin: 0 auto;
-    max-width: 560px;
+    min-height: 100%;
     position: relative;
     text-align: center;
     width: 100%;

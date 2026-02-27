@@ -1,26 +1,33 @@
 <template>
   <div id="app">
-    <div v-if="player.playing" class="now-playing" :class="getNowPlayingClass()">
-      <div class="now-playing__bg-track"></div>
-      <div class="now-playing__bg-progress" :style="progressOverlayStyle"></div>
+    <div class="htdj-player" :class="getNowPlayingClass()">
+      <div class="htdj-player__bg-track"></div>
+      <div class="htdj-player__bg-progress" :style="progressOverlayStyle"></div>
 
-      <div class="now-playing__content">
-        <div class="now-playing__cover" :key="`cover-${player.trackId}-${morphSeed}`">
-          <img
-            :src="player.trackAlbum.image"
-            :alt="player.trackTitle"
-            class="now-playing__image"
-          />
-        </div>
-        <div class="now-playing__details" :key="`details-${player.trackId}-${morphSeed}`">
-          <h1 class="now-playing__track" v-text="player.trackTitle"></h1>
-          <h2 class="now-playing__artists" v-text="getTrackArtists"></h2>
+      <div class="htdj-player__cover-stage">
+        <template v-if="player.playing">
+          <div
+            class="htdj-player__cover"
+            :key="`cover-${player.trackId}-${morphSeed}`"
+          >
+            <img
+              :src="player.trackAlbum.image"
+              :alt="player.trackTitle"
+              class="htdj-player__image"
+            />
+          </div>
+          <div
+            class="htdj-player__details"
+            :key="`details-${player.trackId}-${morphSeed}`"
+          >
+            <h1 class="htdj-player__track" v-text="player.trackTitle"></h1>
+            <h2 class="htdj-player__artists" v-text="getTrackArtists"></h2>
+          </div>
+        </template>
+        <div v-else class="htdj-player__idle">
+          <h1 class="htdj-player__idle-heading">{{ idleMessage }}</h1>
         </div>
       </div>
-    </div>
-
-    <div v-else class="now-playing" :class="getNowPlayingClass()">
-      <h1 class="now-playing__idle-heading">{{ idleMessage }}</h1>
     </div>
   </div>
 </template>
@@ -143,7 +150,7 @@ export default {
      */
     getNowPlayingClass() {
       const playerClass = this.player.playing ? 'active' : 'idle'
-      return `now-playing--${playerClass}`
+      return `htdj-player--${playerClass}`
     },
 
     /**
@@ -240,7 +247,10 @@ export default {
      * Handle newly updated Spotify Tracks.
      */
     handleNowPlaying() {
-      if (this.playerResponse.is_playing === false || !this.playerResponse.item?.id) {
+      if (
+        this.playerResponse.is_playing === false ||
+        !this.playerResponse.item?.id
+      ) {
         this.handleNoActiveSession()
         return
       }
@@ -256,7 +266,9 @@ export default {
 
       this.playerData = {
         playing: this.playerResponse.is_playing,
-        trackArtists: this.playerResponse.item.artists.map(artist => artist.name),
+        trackArtists: this.playerResponse.item.artists.map(
+          artist => artist.name
+        ),
         trackTitle: this.playerResponse.item.name,
         trackId: this.playerResponse.item.id,
         trackDurationMs: this.playerResponse.item.duration_ms,
