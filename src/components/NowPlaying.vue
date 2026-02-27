@@ -1,24 +1,26 @@
 <template>
   <div id="app">
-    <div
-      v-if="player.playing"
-      class="now-playing"
-      :class="getNowPlayingClass()"
-    >
-      <div class="now-playing__cover">
-        <img
-          :src="player.trackAlbum.image"
-          :alt="player.trackTitle"
-          class="now-playing__image"
-        />
-      </div>
-      <div class="now-playing__details">
-        <h1 class="now-playing__track" v-text="player.trackTitle"></h1>
-        <h2 class="now-playing__artists" v-text="getTrackArtists"></h2>
+    <div v-if="player.playing" class="now-playing" :class="getNowPlayingClass()">
+      <div class="now-playing__bg-track"></div>
+      <div class="now-playing__bg-progress" :style="progressOverlayStyle"></div>
+
+      <div class="now-playing__content">
+        <div class="now-playing__cover" :key="`cover-${player.trackId}-${morphSeed}`">
+          <img
+            :src="player.trackAlbum.image"
+            :alt="player.trackTitle"
+            class="now-playing__image"
+          />
+        </div>
+        <div class="now-playing__details" :key="`details-${player.trackId}-${morphSeed}`">
+          <h1 class="now-playing__track" v-text="player.trackTitle"></h1>
+          <h2 class="now-playing__artists" v-text="getTrackArtists"></h2>
+        </div>
       </div>
     </div>
+
     <div v-else class="now-playing" :class="getNowPlayingClass()">
-      <h1 class="now-playing__idle-heading">No music is playing right now.</h1>
+      <h1 class="now-playing__idle-heading">{{ idleMessage }}</h1>
     </div>
   </div>
 </template>
@@ -40,10 +42,15 @@ export default {
   data() {
     return {
       pollPlaying: '',
+      progressTimer: '',
       playerResponse: {},
       playerData: this.getEmptyPlayer(),
       colourPalette: '',
-      swatches: []
+      swatches: [],
+      progressPercent: 0,
+      morphSeed: 0,
+      idleMessage: 'No music is playing right now.',
+      pollingIntervalMs: 5000
     }
   },
 
@@ -54,6 +61,17 @@ export default {
      */
     getTrackArtists() {
       return this.player.trackArtists.join(', ')
+    },
+
+    /**
+     * Return styles to animate dark background layer
+     * across the screen as the song progresses.
+     * @return {Object}
+     */
+    progressOverlayStyle() {
+      return {
+        transform: `translateX(${this.progressPercent}%)`
+      }
     }
   },
 
@@ -63,6 +81,7 @@ export default {
 
   beforeDestroy() {
     clearInterval(this.pollPlaying)
+    clearInterval(this.progressTimer)
   },
 
   methods: {
@@ -71,8 +90,6 @@ export default {
      * get the current played track.
      */
     async getNowPlaying() {
-      let data = {}
-
       try {
         const response = await fetch(
           `${this.endpoints.base}/${this.endpoints.nowPlaying}`,
@@ -84,38 +101,39 @@ export default {
         )
 
         /**
-         * Fetch error.
-         */
-        if (!response.ok) {
-          throw new Error(`An error has occured: ${response.status}`)
-        }
-
-        /**
          * Spotify returns a 204 when no current device session is found.
          * The connection was successful but there's no content to return.
          */
         if (response.status === 204) {
-          data = this.getEmptyPlayer()
-          this.playerData = data
-
-          this.$nextTick(() => {
-            this.$emit('spotifyTrackUpdated', data)
-          })
-
+          this.handleNoActiveSession()
           return
         }
 
-        data = await response.json()
-        this.playerResponse = data
+        if (response.status === 429) {
+          this.handleRateLimited(response)
+          return
+        }
+
+        if (response.status === 403) {
+          this.handlePlaybackUnavailable()
+          return
+        }
+
+        if (response.status === 401 || response.status === 400) {
+          this.handleExpiredToken()
+          return
+        }
+
+        if (!response.ok) {
+          this.handleNoActiveSession()
+          return
+        }
+
+        this.idleMessage = 'No music is playing right now.'
+        this.playerResponse = await response.json()
       } catch (error) {
-        this.handleExpiredToken()
-
-        data = this.getEmptyPlayer()
-        this.playerData = data
-
-        this.$nextTick(() => {
-          this.$emit('spotifyTrackUpdated', data)
-        })
+        this.idleMessage = 'Waiting for Spotify connection…'
+        this.playerData = this.getEmptyPlayer()
       }
     },
 
@@ -132,16 +150,10 @@ export default {
      * Get the colour palette from the album cover.
      */
     getAlbumColours() {
-      /**
-       * No image (rare).
-       */
       if (!this.player.trackAlbum?.image) {
         return
       }
 
-      /**
-       * Run node-vibrant to get colours.
-       */
       Vibrant.from(this.player.trackAlbum.image)
         .quality(1)
         .clearFilters()
@@ -161,7 +173,10 @@ export default {
         trackAlbum: {},
         trackArtists: [],
         trackId: '',
-        trackTitle: ''
+        trackTitle: '',
+        trackDurationMs: 0,
+        trackProgressMs: 0,
+        trackStartedAt: 0
       }
     },
 
@@ -172,7 +187,28 @@ export default {
       clearInterval(this.pollPlaying)
       this.pollPlaying = setInterval(() => {
         this.getNowPlaying()
-      }, 2500)
+      }, this.pollingIntervalMs)
+    },
+
+    /**
+     * Keep song progress in sync and animate the overlay.
+     */
+    setProgressInterval() {
+      clearInterval(this.progressTimer)
+
+      if (!this.playerData.playing || !this.playerData.trackDurationMs) {
+        this.progressPercent = 0
+        return
+      }
+
+      const updateProgress = () => {
+        const elapsed = Date.now() - this.playerData.trackStartedAt
+        const rawProgress = (elapsed / this.playerData.trackDurationMs) * 100
+        this.progressPercent = Math.max(0, Math.min(rawProgress, 100))
+      }
+
+      updateProgress()
+      this.progressTimer = setInterval(updateProgress, 1000)
     },
 
     /**
@@ -194,53 +230,41 @@ export default {
      * Handle newly updated Spotify Tracks.
      */
     handleNowPlaying() {
-      if (
-        this.playerResponse.error?.status === 401 ||
-        this.playerResponse.error?.status === 400
-      ) {
-        this.handleExpiredToken()
-
+      if (this.playerResponse.is_playing === false || !this.playerResponse.item?.id) {
+        this.handleNoActiveSession()
         return
       }
 
-      /**
-       * Player is active, but user has paused.
-       */
-      if (this.playerResponse.is_playing === false) {
-        this.playerData = this.getEmptyPlayer()
-
+      if (this.playerResponse.item.id === this.playerData.trackId) {
+        this.playerData = {
+          ...this.playerData,
+          trackProgressMs: this.playerResponse.progress_ms,
+          trackStartedAt: Date.now() - this.playerResponse.progress_ms
+        }
         return
       }
 
-      /**
-       * The newly fetched track is the same as our stored
-       * one, we don't want to update the DOM yet.
-       */
-      if (this.playerResponse.item?.id === this.playerData.trackId) {
-        return
-      }
-
-      /**
-       * Store the current active track.
-       */
       this.playerData = {
         playing: this.playerResponse.is_playing,
-        trackArtists: this.playerResponse.item.artists.map(
-          artist => artist.name
-        ),
+        trackArtists: this.playerResponse.item.artists.map(artist => artist.name),
         trackTitle: this.playerResponse.item.name,
         trackId: this.playerResponse.item.id,
+        trackDurationMs: this.playerResponse.item.duration_ms,
+        trackProgressMs: this.playerResponse.progress_ms,
+        trackStartedAt: Date.now() - this.playerResponse.progress_ms,
         trackAlbum: {
           title: this.playerResponse.item.album.name,
           image: this.playerResponse.item.album.images[0].url
         }
       }
+
+      this.pollingIntervalMs = 5000
+      this.setDataInterval()
+      this.morphSeed += 1
     },
 
     /**
-     * Handle newly stored colour palette:
-     * - Map data to readable format
-     * - Get and store random colour combination.
+     * Handle newly stored colour palette.
      */
     handleAlbumPalette(palette) {
       let albumColours = Object.keys(palette)
@@ -255,7 +279,6 @@ export default {
         })
 
       this.swatches = albumColours
-
       this.colourPalette =
         albumColours[Math.floor(Math.random() * albumColours.length)]
 
@@ -265,13 +288,45 @@ export default {
     },
 
     /**
+     * 204 or no playable item.
+     */
+    handleNoActiveSession() {
+      this.idleMessage = 'No music is playing right now.'
+      this.playerData = this.getEmptyPlayer()
+    },
+
+    /**
+     * 429 response: back off polling according to Retry-After.
+     */
+    handleRateLimited(response) {
+      const retryAfter = Number(response.headers.get('Retry-After')) || 15
+      this.idleMessage = `Spotify rate limit reached. Retrying in ${retryAfter}s…`
+      this.playerData = this.getEmptyPlayer()
+      this.pollingIntervalMs = Math.max(retryAfter * 1000, 5000)
+      this.setDataInterval()
+    },
+
+    /**
+     * 403 response: playback endpoints may be restricted.
+     */
+    handlePlaybackUnavailable() {
+      this.idleMessage =
+        'Playback status is unavailable for this account/app under Spotify API limits.'
+      this.playerData = this.getEmptyPlayer()
+      this.pollingIntervalMs = 30000
+      this.setDataInterval()
+    },
+
+    /**
      * Handle an expired access token from Spotify.
      */
     handleExpiredToken() {
       clearInterval(this.pollPlaying)
+      clearInterval(this.progressTimer)
       this.$emit('requestRefreshToken')
     }
   },
+
   watch: {
     /**
      * Watch the auth object returned from Spotify.
@@ -279,6 +334,7 @@ export default {
     auth: function(oldVal, newVal) {
       if (newVal.status === false) {
         clearInterval(this.pollPlaying)
+        clearInterval(this.progressTimer)
       }
     },
 
@@ -297,6 +353,7 @@ export default {
 
       this.$nextTick(() => {
         this.getAlbumColours()
+        this.setProgressInterval()
       })
     }
   }

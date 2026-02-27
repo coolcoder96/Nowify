@@ -81,6 +81,15 @@ Alternatively, you can clone the repo, compile the code offline, and upload to y
 
 ---
 
+
+### Spotify API limits compatibility (Feb 2026+)
+
+Nowify is designed to gracefully handle stricter playback API limits:
+
+* It backs off polling when Spotify returns **429 rate limit** responses (using `Retry-After`).
+* It keeps the UI running if playback endpoints are unavailable (**403**) and shows a clear on-screen status message instead of forcing logout.
+* It only requests the minimum read scope: `user-read-currently-playing`.
+
 ### Original Write up:
 [https://ashcroft.dev/blog/now-playing-screen-spotify-raspberry-pi-es6/](https://ashcroft.dev/blog/now-playing-screen-spotify-raspberry-pi-es6/)
 
