@@ -46,7 +46,7 @@ Once authorised, follow the on-screen instructions to connect your repository. Y
 
 Click on 'Deploy site'.
 
-_Note: Nowify should use Node 14. This has been set in the project environment. I've only ever attempted this Netlify, so cannot help you if you use another platform._
+_Note: Nowify now targets Node.js 20.x (set via `.node-version` and `package.json` engines) so build/runtime environments stay aligned on a currently supported version._
 
 ### 3. Create Spotify Client keys.
 To allow authorisation to your track data, you'll need to generate Spotify API keys. You can do this by logging in to the [Spotify Dashboard](https://developer.spotify.com/dashboard/applications) creating an app.
