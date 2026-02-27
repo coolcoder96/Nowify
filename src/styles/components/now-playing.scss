@@ -4,7 +4,7 @@
  * Styles for the 'Now Playing' screen.
  *
  */
-.now-playing {
+.htdj-player {
   background: linear-gradient(
     145deg,
     var(--colour-background-now-playing),
@@ -41,11 +41,12 @@
     will-change: transform;
   }
 
-  &__content {
+  &__cover-stage {
     align-items: center;
     display: flex;
     flex-flow: column nowrap;
     justify-content: center;
+    min-height: 100%;
     position: relative;
     width: 100%;
     z-index: 1;
@@ -79,6 +80,10 @@
     opacity: 0.8;
   }
 
+  &__idle {
+    text-align: center;
+  }
+
   &--active {
     align-items: center;
     justify-content: center;
@@ -93,7 +98,7 @@
   @media only screen and (min-width: 767px) {
     padding: 10%;
 
-    &__content {
+    &__cover-stage {
       flex-flow: row nowrap;
     }
 
