@@ -36,8 +36,8 @@
   &__bg-progress {
     background: linear-gradient(90deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.08));
     transition: transform 1s linear;
-    transform: translateX(0%);
-    width: 120%;
+    transform: scaleX(0);
+    transform-origin: left center;
     will-change: transform;
   }
 
