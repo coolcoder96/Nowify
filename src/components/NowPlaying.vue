@@ -77,7 +77,7 @@ export default {
      */
     progressOverlayStyle() {
       return {
-        transform: `translateX(${this.progressPercent}%)`
+        transform: `scaleX(${this.progressPercent / 100})`
       }
     }
   },
@@ -228,7 +228,17 @@ export default {
       )
 
       document.documentElement.style.setProperty(
-        '--colour-background-now-playing',
+        '--colour-now-playing-text',
+        this.colourPalette.text
+      )
+
+      document.documentElement.style.setProperty(
+        '--colour-now-playing-gradient-start',
+        this.colourPalette.background
+      )
+
+      document.documentElement.style.setProperty(
+        '--colour-now-playing-gradient-end',
         this.colourPalette.background
       )
     },
