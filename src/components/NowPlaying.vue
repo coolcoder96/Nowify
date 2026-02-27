@@ -70,7 +70,7 @@ export default {
      */
     progressOverlayStyle() {
       return {
-        transform: `translateX(${this.progressPercent}%)`
+        transform: `scaleX(${this.progressPercent / 100})`
       }
     }
   },
