@@ -5,16 +5,55 @@
  *
  */
 .now-playing {
-  background-color: var(--colour-background-now-playing);
+  background: linear-gradient(
+    145deg,
+    var(--colour-background-now-playing),
+    rgba(0, 0, 0, 0.45)
+  );
   color: var(--color-text-primary);
   display: flex;
   flex-flow: column nowrap;
   height: 100%;
+  overflow: hidden;
   padding: var(--spacing-l);
+  position: relative;
   width: 100%;
+
+  &__bg-track,
+  &__bg-progress {
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 0;
+  }
+
+  &__bg-track {
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.14), transparent 50%);
+  }
+
+  &__bg-progress {
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.08));
+    transition: transform 1s linear;
+    transform: translateX(0%);
+    width: 120%;
+    will-change: transform;
+  }
+
+  &__content {
+    align-items: center;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    z-index: 1;
+  }
 
   &__cover,
   &__details {
+    animation: morph-in 500ms cubic-bezier(.2, .7, .3, 1);
     padding: var(--spacing-m);
     text-align: center;
     width: 100%;
@@ -25,14 +64,11 @@
   }
 
   &__image {
-    box-shadow: 1px 1px 16px -2px rgba(0, 0, 0, .3);
+    border-radius: 1rem;
+    box-shadow: 1px 1px 16px -2px rgba(0, 0, 0, .45);
     height: auto;
     max-width: 60vw;
     width: 100%;
-  }
-
-  &__details {
-    text-align: center;
   }
 
   &__track {
@@ -49,23 +85,40 @@
   }
 
   &--idle {
-    display: flex;
     align-items: center;
+    display: flex;
     justify-content: center;
   }
 
   @media only screen and (min-width: 767px) {
-    flex-flow: row nowrap;
     padding: 10%;
+
+    &__content {
+      flex-flow: row nowrap;
+    }
 
     &__cover,
     &__details {
-      width: 50%;
       max-width: 495px;
+      width: 50%;
     }
 
     &__details {
       text-align: left;
     }
+  }
+}
+
+@keyframes morph-in {
+  0% {
+    filter: blur(6px);
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  100% {
+    filter: blur(0);
+    opacity: 1;
+    transform: scale(1);
   }
 }
